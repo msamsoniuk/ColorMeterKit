@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  DisplayParameter.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/30.
@@ -14,6 +14,8 @@ public struct DisplayParameter {
     public var colorMode: ColorMode
     public var differenceFormula: DifferenceFormula
     
+
+
     public var data: [UInt8] {
         return [
             0xbb,
@@ -23,12 +25,14 @@ public struct DisplayParameter {
             measureMode.rawValue,
             colorMode.rawValue,
             differenceFormula.rawValue,
-            secondLightSource.byte,
+            secondLightSource.category.rawValue, // Alterado de secondLightSource.byte
+            secondLightSource.angle.rawValue,   // Adicionado
             0xff,
             0
         ]
     }
-    
+
+
     public init(firstLightSource: LightSource, secondLightSource: LightSource, measureMode: MeasureData.MeasureMode, colorMode: ColorMode, differenceFormula: DifferenceFormula) {
         self.firstLightSource = firstLightSource
         self.secondLightSource = secondLightSource

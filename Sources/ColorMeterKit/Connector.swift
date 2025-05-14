@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Connector.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/28.
@@ -58,20 +58,24 @@ class Connector: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     }
     
     func writeData(data: Data) {
-        if let peripheral = connected, let characteristic = characteristic {
-            let count = (Double(data.count) / 20).rounded(.up)
-            let dataEnd = data.count
-            for c in 0 ..< Int(count) {
-                let start = c * 20
-                let chunkEnd = (c + 1) * 20
-                let end = chunkEnd < dataEnd ? chunkEnd : dataEnd
-                let chunk = data.subdata(in: start ..< end)
-                peripheral.writeValue(chunk, for: characteristic, type: .withoutResponse)
-            }
-        } else {
+        guard let peripheral = connected, let characteristic = characteristic else {
+            print("DEBUG: Falha ao escrever: dispositivo ou característica não disponível")
             statePublish.onError(CMError.peripheralDisconnect)
+            return
+        }
+        print("DEBUG: Enviando dados para o dispositivo: \(data.hexEncodedString())")
+        let count = (Double(data.count) / 20).rounded(.up)
+        let dataEnd = data.count
+        for c in 0 ..< Int(count) {
+            let start = c * 20
+            let chunkEnd = (c + 1) * 20
+            let end = chunkEnd < dataEnd ? chunkEnd : dataEnd
+            let chunk = data.subdata(in: start ..< end)
+            print("DEBUG: Enviando chunk \(c+1): \(chunk.hexEncodedString())")
+            peripheral.writeValue(chunk, for: characteristic, type: .withoutResponse)
         }
     }
+
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         print("found:", peripheral.name)
@@ -107,6 +111,19 @@ class Connector: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         statePublish.onError(CMError.failToConnect)
     }
     
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        if let characteristics = service.characteristics, let characteristic = characteristics.first(where: { $0.uuid.uuidString == Self.characteristic }) {
+            self.characteristic = characteristic
+            peripheral.setNotifyValue(true, for: characteristic)
+            print("DEBUG: Característica \(Self.characteristic) descoberta e notificação ativada")
+            statePublish.onNext(.init(state: .connected, peripheral: peripheral))
+        } else {
+            print("DEBUG: Falha ao descobrir característica \(Self.characteristic)")
+            statePublish.onError(CMError.failToConnect)
+        }
+    }
+
+    
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let services = peripheral.services, let service = services.first(where: { $0.uuid.uuidString == Self.service }) {
             self.service = service
@@ -114,20 +131,17 @@ class Connector: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        if let characteristics = service.characteristics, let characteristic = characteristics.first(where: { $0.uuid.uuidString == Self.characteristic }) {
-            self.characteristic = characteristic
-            peripheral.setNotifyValue(true, for: characteristic)
-            statePublish.onNext(.init(state: .connected, peripheral: peripheral))
-        }
-    }
-    
-    
+
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         statePublish.onNext(.init(state: .notification, data: characteristic.value, peripheral: peripheral))
     }
 }
 
+extension Data {
+    func hexEncodedString() -> String {
+        return map { String(format: "%02x", $0) }.joined()
+    }
+}
 
 extension CBManagerState: CustomStringConvertible {
     public var description: String {

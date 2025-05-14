@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  ColorMode.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/30.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum ColorMode: UInt8 {
+public enum ColorMode: UInt8, Codable, CaseIterable {
     case CIELab
     case CIELch
     case hunterLab
@@ -15,6 +15,7 @@ public enum ColorMode: UInt8 {
     case XYZ
     case Yxy
     case RGB
+    case CMYK // Novo modo para CMYK
     case metamerism
     case reflect
     case opacity
@@ -40,8 +41,7 @@ public enum ColorMode: UInt8 {
     case HLS
     case LRV
     
-    
-    public enum Whiteness: UInt8 {
+    public enum Whiteness: UInt8, Codable {
         case ASTM
         case CIE
         case hunter

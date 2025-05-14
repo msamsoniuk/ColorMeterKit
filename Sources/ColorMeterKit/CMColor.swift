@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  CMColor.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/31.
@@ -13,7 +13,7 @@ public class CMColor {
     public typealias CH = (Double, Double)
     public typealias RGB = (UInt8, UInt8, UInt8)
     
-    private var filledSpectral: [Double]!
+    public var filledSpectral: [Double]!
     private var lightSource: LightSource!
     
     public var xyz: XYZ!
@@ -158,5 +158,34 @@ public class CMColor {
         
         
         return (UInt8(R), UInt8(G), UInt8(B))
+    }
+}
+
+extension CMColor {
+    public typealias CMYK = (Double, Double, Double, Double)
+    
+    public var cmyk: CMYK {
+        return Self.RGB2CMYK(rgb: rgb)
+    }
+    
+    public static func RGB2CMYK(rgb: RGB) -> CMYK {
+        // Normaliza RGB de 0-255 para 0-1
+        let r = Double(rgb.0) / 255.0
+        let g = Double(rgb.1) / 255.0
+        let b = Double(rgb.2) / 255.0
+        
+        // Calcula K (preto)
+        let k = 1.0 - max(r, g, b)
+        
+        // Evita divisão por zero
+        let divisor = (1.0 - k) == 0 ? 1.0 : (1.0 - k)
+        
+        // Calcula C, M, Y
+        let c = (1.0 - r - k) / divisor
+        let m = (1.0 - g - k) / divisor
+        let y = (1.0 - b - k) / divisor
+        
+        // Converte para porcentagem (0-100)
+        return (c * 100.0, m * 100.0, y * 100.0, k * 100.0)
     }
 }

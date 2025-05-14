@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  MeasureData.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/22.
@@ -184,7 +184,8 @@ public class MeasureData: CustomStringConvertible {
 
 
 extension MeasureData {
-    public enum DataFrom: UInt8 {
+    // public enum DataFrom: UInt8 {
+    public enum DataFrom: UInt8, Codable {
         /// data from measure
         case measure
         
@@ -192,7 +193,7 @@ extension MeasureData {
         case storage
     }
     
-    public enum MeasureMode: UInt8 {
+    public enum MeasureMode: UInt8, Codable, CaseIterable {
         case SCI,
              SCE,
              M0,

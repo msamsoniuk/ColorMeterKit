@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  CalibrationState.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/30.
@@ -19,3 +19,4 @@ public struct CalibrationState {
         blackCalibrateTimestamp = data.subdata(in: 8 ..< 12).uint32
     }
 }
+

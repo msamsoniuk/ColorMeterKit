@@ -1,13 +1,14 @@
 //
-//  File.swift
+//  LightSource.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/30.
 //
 
+
 import Foundation
 
-public struct LightSource {
+public struct LightSource: Codable, Hashable {
     public var angle: Angle
     public var category: Category
     
@@ -24,11 +25,39 @@ public struct LightSource {
         self.angle = angle
         self.category = category
     }
+    
+    // Implementação de Codable
+    enum CodingKeys: String, CodingKey {
+        case angle
+        case category
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        angle = try container.decode(Angle.self, forKey: .angle)
+        category = try container.decode(Category.self, forKey: .category)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(angle, forKey: .angle)
+        try container.encode(category, forKey: .category)
+    }
+
+    // Implementação de Hashable
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(angle)
+        hasher.combine(category)
+    }
+
+    public static func == (lhs: LightSource, rhs: LightSource) -> Bool {
+        return lhs.angle == rhs.angle && lhs.category == rhs.category
+    }
+
 }
 
-
 extension LightSource {
-    public enum Angle: UInt8 {
+    public enum Angle: UInt8, Codable, CaseIterable, Hashable {
         case deg2,
              deg10
         
@@ -130,7 +159,7 @@ extension LightSource {
         }
     }
     
-    public enum Category: UInt8 {
+    public enum Category: UInt8, Codable, CaseIterable, Hashable {
         case A,
              C,
              D50,

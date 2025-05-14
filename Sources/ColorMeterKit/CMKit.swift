@@ -1,3 +1,12 @@
+//
+//  CMKit.swift
+//  
+//
+//  Created by chenlongmingob@gmail.com on 2020/12/28.
+//
+
+
+
 import Foundation
 import CoreBluetooth
 import RxSwift
@@ -67,6 +76,11 @@ public class CMKit: NSObject {
     public func stopScan() {
         connector.stopScan()
     }
+
+        public func getDeviceInfo() -> Observable<Data?> {
+        let getDeviceInfoCommand = Command(bytes: [0xbb, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xe0], responseBytesCount: 20)
+        return execCommand(command: getDeviceInfoCommand)
+    }
     
     /// connect to peripheral
     ///
@@ -132,16 +146,16 @@ public class CMKit: NSObject {
             }
     }
     
-    /// exec command
-    /// - parameter command: `CMCommand` command
-    /// - returns: `Observable<Data?>`
+
     public func execCommand(command: Command) -> Observable<Data?> {
         return Observable<Data?>.create { [weak self] observer in
             var disposable: Disposable? = nil
             if let strongSelf = self {
                 if !strongSelf.connector.isConnected {
+                    print("DEBUG: Erro: Dispositivo não conectado")
                     observer.onError(CMError.peripheralDisconnect)
                 } else {
+                    print("DEBUG: Executando comando: \(command.data.hexEncodedString())")
                     strongSelf.connector.writeData(data: command.data)
                     if command.responseBytesCount == 0 {
                         observer.onNext(nil)
@@ -151,29 +165,80 @@ public class CMKit: NSObject {
                             .buffer(timeSpan: .seconds(command.timeout), count: command.responseBytesCount, scheduler: ConcurrentDispatchQueueScheduler(queue: .global()))
                             .subscribe(
                                 onNext: { data in
+                                    print("DEBUG: Resposta recebida: \(data.map { String(format: "0x%02x", $0) }.joined(separator: ", "))")
                                     if data.count < command.responseBytesCount {
+                                        print("DEBUG: Timeout: Recebidos \(data.count) bytes, esperados \(command.responseBytesCount)")
                                         observer.onError(CMError.responseTimeout)
-                                    } else if data.count != command.responseBytesCount || !Command.validate(data: data) {
+                                    } else if data.count != command.responseBytesCount {
+                                        print("DEBUG: Resposta com tamanho incorreto: \(data.count) bytes, esperados \(command.responseBytesCount)")
                                         observer.onError(CMError.invalidResponseData)
+                                    } else if !Command.validate(data: data) {
+                                        print("DEBUG: Checksum inválido, mas aceitando resposta para análise: \(data.map { String(format: "0x%02x", $0) }.joined(separator: ", "))")
+                                        observer.onNext(data.data)
+                                        observer.onCompleted()
                                     } else {
                                         observer.onNext(data.data)
                                         observer.onCompleted()
                                     }
                                 },
-                                onError: { (err) in
+                                onError: { err in
+                                    print("DEBUG: Erro ao receber resposta: \(err)")
                                     observer.onError(err)
                                 }
                             )
                     }
                 }
             }
-            
-            return Disposables.create {
-                disposable?.dispose()
-            }
+            return Disposables.create { disposable?.dispose() }
         }
     }
-    
+    /// exec command
+    /// - parameter command: `CMCommand` command
+    /// - returns: `Observable<Data?>`
+/*
+    public func execCommand(command: Command) -> Observable<Data?> {
+        return Observable<Data?>.create { [weak self] observer in
+            var disposable: Disposable? = nil
+            if let strongSelf = self {
+                if !strongSelf.connector.isConnected {
+                    print("DEBUG: Erro: Dispositivo não conectado")
+                    observer.onError(CMError.peripheralDisconnect)
+                } else {
+                    print("DEBUG: Executando comando: \(command.data.hexEncodedString())")
+                    strongSelf.connector.writeData(data: command.data)
+                    if command.responseBytesCount == 0 {
+                        observer.onNext(nil)
+                        observer.onCompleted()
+                    } else {
+                        disposable = strongSelf.observeNotificationBytes()
+                            .buffer(timeSpan: .seconds(command.timeout), count: command.responseBytesCount, scheduler: ConcurrentDispatchQueueScheduler(queue: .global()))
+                            .subscribe(
+                                onNext: { data in
+                                    print("DEBUG: Resposta recebida: \(data.map { String(format: "0x%02x", $0) }.joined(separator: ", "))")
+                                    if data.count < command.responseBytesCount {
+                                        print("DEBUG: Timeout: Recebidos \(data.count) bytes, esperados \(command.responseBytesCount)")
+                                        observer.onError(CMError.responseTimeout)
+                                    } else if data.count != command.responseBytesCount || !Command.validate(data: data) {
+                                        print("DEBUG: Resposta inválida: \(data.map { String(format: "0x%02x", $0) }.joined(separator: ", "))")
+                                        observer.onError(CMError.invalidResponseData)
+                                    } else {
+                                        observer.onNext(data.data)
+                                        observer.onCompleted()
+                                    }
+                                },
+                                onError: { err in
+                                    print("DEBUG: Erro ao receber resposta: \(err)")
+                                    observer.onError(err)
+                                }
+                            )
+                    }
+                }
+            }
+            return Disposables.create { disposable?.dispose() }
+        }
+    }
+
+*/
     /// send wakeup peripheral
     public func wakeup () -> Observable<Void> {
         return execCommand(command: .wakeUp)
@@ -398,6 +463,7 @@ public class CMKit: NSObject {
     /// ))
     /// .subscribe()
     /// ```
+
     public func setDisplayParameter(_ parameter: DisplayParameter) -> Observable<Void> {
         return wakeup()
             .concatMap { [weak self] _ -> Observable<Data?> in

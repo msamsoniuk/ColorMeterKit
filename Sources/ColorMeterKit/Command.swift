@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Command.swift
 //  
 //
 //  Created by chenlongmingob@gmail.com on 2020/12/23.
@@ -94,9 +94,12 @@ public class Command {
     
     public static var getCalibrationState = Command(bytes: [0xbb, 0x1e, 0, 0, 0, 0, 0, 0, 0xff, 0], responseBytesCount: 20)
     
+    
+
     public static func setDisplayParameter(_ parameter: DisplayParameter) -> Command {
-        return Command(bytes: parameter.data, responseBytesCount: 10)
-    }
+    return Command(bytes: parameter.data, responseBytesCount: 10, timeout: 5) // Aumentado para 5 segundos
+}
+
     
     public static func setToleranceParameter(_ parameter: ToleranceParameter) -> Command {
         return Command(bytes: parameter.data, responseBytesCount: 10)
