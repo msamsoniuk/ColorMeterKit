@@ -64,9 +64,9 @@ extension LightSource {
         public var string: String {
             switch self {
             case .deg2:
-                return "2°C"
+                return "2°"
             default:
-                return "10°C"
+                return "10°"
             }
         }
         

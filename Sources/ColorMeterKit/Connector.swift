@@ -78,7 +78,7 @@ class Connector: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
 
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        print("found:", peripheral.name)
+        if peripheral.name != nil { print("found:", peripheral.name) }
         statePublish.onNext(.init(state: .scanned, peripheral: peripheral))
     }
     

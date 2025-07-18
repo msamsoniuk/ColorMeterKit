@@ -159,6 +159,95 @@ public class CMColor {
         
         return (UInt8(R), UInt8(G), UInt8(B))
     }
+
+
+    public static func Lab2RGBLinear(lab: (Double, Double, Double)) -> (Double, Double, Double) {
+        let (L, a, b) = lab
+
+        // XYZ reference white (D65)
+        let Xn = 0.95047
+        let Yn = 1.00000
+        let Zn = 1.08883
+
+        // Convert LAB to XYZ
+        let fy = (L + 16.0) / 116.0
+        let fx = a / 500.0 + fy
+        let fz = fy - b / 200.0
+
+        func fInv(_ t: Double) -> Double {
+            let cube = t * t * t
+            return cube > 0.008856 ? cube : (t - 16.0 / 116.0) / 7.787
+        }
+
+        let x = Xn * fInv(fx)
+        let y = Yn * fInv(fy)
+        let z = Zn * fInv(fz)
+
+        // Convert XYZ to linear RGB
+        var rl =  3.2406 * x - 1.5372 * y - 0.4986 * z
+        var gl = -0.9689 * x + 1.8758 * y + 0.0415 * z
+        var bl =  0.0557 * x - 0.2040 * y + 1.0570 * z
+
+        // Clamp to 0.0–1.0 range before applying gamma
+        rl = max(0.0, min(1.0, rl))
+        gl = max(0.0, min(1.0, gl))
+        bl = max(0.0, min(1.0, bl))
+
+        // Apply gamma correction (sRGB)
+        func gammaCorrect(_ c: Double) -> Double {
+            return c <= 0.0031308 ? 12.92 * c : 1.055 * pow(c, 1/2.4) - 0.055
+        }
+
+        let rr = gammaCorrect(rl)
+        let gg = gammaCorrect(gl)
+        let bb = gammaCorrect(bl)
+
+        return (rr, gg, bb) // RGB values in 0.0–1.0 range
+    }
+
+    public static func rgbToLab(_ rgb: (UInt8, UInt8, UInt8)) -> (Double, Double, Double) {
+            let R = Double(rgb.0) / 255.0
+            let G = Double(rgb.1) / 255.0
+            let B = Double(rgb.2) / 255.0
+
+            // Linearize
+            func invGamma(_ c: Double) -> Double {
+                return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+
+            let rl = invGamma(R)
+            let gl = invGamma(G)
+            let bl = invGamma(B)
+
+            // RGB → XYZ (sRGB, D65)
+            let x = rl * 0.4124 + gl * 0.3576 + bl * 0.1805
+            let y = rl * 0.2126 + gl * 0.7152 + bl * 0.0722
+            let z = rl * 0.0193 + gl * 0.1192 + bl * 0.9505
+
+            // Normalize with D65 white point
+            let Xn = 0.95047
+            let Yn = 1.00000
+            let Zn = 1.08883
+
+            var fx = x / Xn
+            var fy = y / Yn
+            var fz = z / Zn
+
+            func f(_ t: Double) -> Double {
+                return t > 0.008856 ? pow(t, 1.0/3.0) : (7.787 * t) + (16.0 / 116.0)
+            }
+
+            fx = f(fx)
+            fy = f(fy)
+            fz = f(fz)
+
+            let L = (116 * fy) - 16
+            let a = 500 * (fx - fy)
+            let b = 200 * (fy - fz)
+
+            return (L, a, b)
+        }
+
 }
 
 extension CMColor {
